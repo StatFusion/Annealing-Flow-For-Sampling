@@ -12,6 +12,7 @@ plot_results/
 
 # Ignore trained samplers
 samplers_trained/
+samplers_trained_2/
 samplers_trained_Langevin/
 plot_results_Langevin/
 

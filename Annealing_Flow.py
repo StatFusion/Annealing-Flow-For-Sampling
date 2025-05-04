@@ -324,7 +324,7 @@ def JKO_loss_func(xinput, model, ls_args_CNF, beta):
 
 
 # Moves data through all given block (forward/backward), and return the intermediate results
-def move_over_blocks(self, move_configs, Langevin, nte = 1000):
+def move_over_blocks(self, move_configs, Langevin, Type, Xdim_flow, c, beta, nte = 1000):
     with torch.no_grad():
         Xtest = self.X_test.to(device)
         if move_configs.block_id > 1:
@@ -336,7 +336,7 @@ def move_over_blocks(self, move_configs, Langevin, nte = 1000):
                 Zout, dlogpx = FlowNet_forward(Zout, self_mod.CNF, self_mod.ls_args_CNF, #ls_args_CNF consists of all sub-int
                                           self_mod.block_now, return_full = False)
                 if Langevin:
-                    Zout = langevin_adjust(Zout)
+                    Zout = langevin_adjust(Zout, Type=Type, Xdim_flow=Xdim_flow, c=c, beta=beta)
 
                 Zhat_ls_prev.append(Zout) #only the last value
                 dlogpx_ls_prev.append(dlogpx[-1])
@@ -347,7 +347,7 @@ def move_over_blocks(self, move_configs, Langevin, nte = 1000):
                                      self.block_now, return_full = True)
 
         if Langevin:
-            Zhat_ls[-1] = langevin_adjust(Zhat_ls[-1])
+            Zhat_ls[-1] = langevin_adjust(Zhat_ls[-1], Type=Type, Xdim_flow=Xdim_flow, c=c, beta=beta)
 
         if mult_gpu:
             ids = range(len(Zhat_ls))
@@ -402,7 +402,7 @@ def loop_data_loader(dataloader):
 def pdist(sample_1, sample_2, norm=2):
     return torch.cdist(sample_1, sample_2, p=norm)
 
-def langevin_adjust(X, step_size=0.1, n_steps=20):
+def langevin_adjust(X, Type, Xdim_flow, c, beta, step_size=0.1, n_steps=20):
     X = X.clone()
     for _ in range(n_steps):
         if Type == 'GMM_sphere':
@@ -493,13 +493,14 @@ if __name__ == '__main__':
     # For 50D ExpGauss, without Langevin, meaningful samples with separated modes 
     # may only appear after training several blocks, as shown in the intermediate results plots.
     Langevin = True
-    
+
     block_idxes = args_yaml['training']['block_idxes']
     c = args_yaml['data']['c']
     c1 = c
-    master_dir = f'samplers_trained_Langevin/d={Xdim_flow}_{Type}_c={c1}'
+    master_dir = f'samplers_trained/d={Xdim_flow}_{Type}_c={c1}'
 
     if Langevin:
+        master_dir += '_Langevin'
         args_yaml['training']['tot_iters'] = 500
     
     if Type == 'GMM_sphere':
@@ -680,7 +681,7 @@ if __name__ == '__main__':
                 print(f'######### Evaluate at iter {i+1}')    
                 on_off(self, on = True)
                 move_configs = Namespace(block_id = block_id, self_ls_prev = self_ls_prev)
-                Z_traj, tot_dlogpx = move_over_blocks(self, move_configs, Langevin=Langevin, nte = nte) # Towards the target distribution
+                Z_traj, tot_dlogpx = move_over_blocks(self, move_configs, Langevin=Langevin, Type=Type, Xdim_flow=Xdim_flow, c=c, beta=beta, nte = nte) # Towards the target distribution
                 index = i//viz_freq
                 plot_traj(Z_traj, args_yaml['data']['Xdim_flow'])
 
@@ -692,7 +693,7 @@ if __name__ == '__main__':
                 on_off(self, on = True)
                 nmax = 10000
                 move_configs = Namespace(block_id = block_id, self_ls_prev = self_ls_prev)
-                X_traj, tot_dlogpx = move_over_blocks(self, move_configs, Langevin=Langevin, nte=nmax)
+                X_traj, tot_dlogpx = move_over_blocks(self, move_configs, Langevin=Langevin, Type=Type, Xdim_flow=Xdim_flow, c=c, beta=beta, nte=nmax)
                 on_off(self, on = False)
                 Xtrain_pushed = push_samples_forward(train_loader_raw, self)
                 print(f'##### Shape of Xtrain_pushed is {Xtrain_pushed.shape} #####')
@@ -705,9 +706,9 @@ if __name__ == '__main__':
     print('########################## Training Completed ##########################')
     print('########################## Start Sampling #############################')
     for block_id in block_idxes:
-
-        samples_dir = f'samplers_trained_Langevin/d={Xdim_flow}_{Type}_c={c1}'
-
+        samples_dir = f'samplers_trained/d={Xdim_flow}_{Type}_c={c1}'
+        if Langevin:
+            samples_dir += '_Langevin'
         folder_suffix = args_yaml['eval']['folder_suffix']
         dir = os.path.join(samples_dir,f'{folder_suffix}')
         prefix = 'block' 
@@ -749,7 +750,7 @@ if __name__ == '__main__':
     on_off(self, on = True)
     move_configs = Namespace(block_id = block_id, self_ls_prev = self_ls_prev)
     start_time = time.time()
-    Z_traj, tot_dlogpx = move_over_blocks(self, move_configs, Langevin=Langevin, nte = nte)
+    Z_traj, tot_dlogpx = move_over_blocks(self, move_configs, Langevin=Langevin, Type=Type, Xdim_flow=Xdim_flow, c=c, beta=beta, nte = nte)
 
     end_time = time.time()
     print(f"Time taken for sampling {nte} points: {end_time - start_time} seconds")

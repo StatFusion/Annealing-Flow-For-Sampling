@@ -1,16 +1,15 @@
 data:
-  # The type can be: 'GMM_sphere', 'exponential', 'truncated', 'funnel'
-  type: 'GMM_sphere'
+  # The type can be: 'GMM_sphere', 'ExpGauss', 'truncated', 'funnel'
+  type: 'ExpGauss'
   unsymmetric: True
-  Xdim_flow: 2
-  c: 12 # This serves as: radius for GMM_spehre (10 if num_means==8; 8 if num_means==6); radius for indicator, GMM_cube, and exponential
+  Xdim_flow: 50
+  c: 10 # This serves as: radius for GMM_spehre (10 if num_means==8; 8 if num_means==6); radius for indicator, GMM_cube, and exponential
   num_means: 10  # This is only used for GMM_spehre type; Ignore this for other types
   S: 3 # !! If users do not use the default S=list(3) when training their samplers, they must adjust this setting accordingly.
 
 CNF:
   dynamic: True
   hid_dims: '32-32'
-  #hid_dims: '32-32'
 
 sampling:
   nsamples: 5000

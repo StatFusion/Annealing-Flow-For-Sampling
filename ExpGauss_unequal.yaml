@@ -1,5 +1,5 @@
 data:
-  type: 'exponential_unequal'
+  type: 'ExpGauss_unequal'
   Xdim_flow: 50
   c: 10
 
@@ -11,13 +11,19 @@ CNF:
   #hk_blocks: [0.05, 0.05, 0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05, 0.05, 0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05, 0.05, 0.05, 0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05] # GMM6
 
 training:
+  #################################################################################
+  ## For ExpGauss experiments:
+  ## We use the Type II loss, as discussed in "The objective" of Appendix C.1.
+  ## The first term in the loss is replaced with: -\nabla \log q(x(t_k)) \cdot v_k(x(t_k))
+  #################################################################################
+  loss_type: 'Type_II'
   ntr: 100000
   nte: 5000
   add_diffuse: None
   load_checkpoint: True
   warm_start: True 
   batch_size: 1000 
-  block_idxes: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25] # Number of blocks
+  block_idxes: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20] # Number of blocks
   clip_grad: True
   tot_iters: 1000  # This will be automatically set as 500 if Langevin adjustment is used
   lr: 0.0001

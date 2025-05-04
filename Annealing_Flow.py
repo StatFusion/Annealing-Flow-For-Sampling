@@ -17,6 +17,8 @@ from scipy.stats import gaussian_kde
 import time
 from sampler_plot import plot_samples
 import numpy as np
+import torch.distributions as dist
+
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 num_gpu = torch.cuda.device_count()
@@ -133,11 +135,8 @@ class CNF(nn.Module):
         dJacnorm = torch.zeros(x.shape[0]).to(device)
         self.odefunc.e_ls = None 
         self.odefunc.fix_e_ls = args.fix_e_ls
-        self.odefunc.counter = 0
-        
+        self.odefunc.counter = 0     
         out = self.odefunc(0,x,velocity=True)
-        #out = self.odefunc(1,x,velocity=True)
-
         if args.use_NeuralODE is False:
             predz, dlogpx, dJacnorm = tdeq.odeint(
                 self.odefunc, (x, dlogpx, dJacnorm), integration_times, method=args.int_mtd,
@@ -195,7 +194,6 @@ def FlowNet_forward(xinput, CNF, ls_args_CNF, block_now, test = True, return_ful
         else:
             predz_ls = torch.stack(predz_ls, dim=0)
             dlogpx_ls = torch.stack(dlogpx_ls, dim=0)
-        # shape of dlogpx_ls: 4*10000
 
         if return_full:
             return predz_ls, log_px
@@ -212,25 +210,16 @@ def l2_norm_sqr(input, return_full = False):
     else:
         return norms.mean()
 
-def gradient_E_target(input, k=20):
-    diff = input.pow(2).sum(axis=1)
-    return torch.log(1+torch.exp(-k*(torch.sqrt(diff)-c))).mean() + 0.5*(diff).mean()
-
-################################################################################
-# We recommend manually calculating the Jacobian for GMM, since the automatic differentiation sometimes causes numerical issues.
-################################################################################
-
-def jacobian_manual_GMM(input_tensor, c):
-
-
-
+def score_GMM(input_tensor, c):
+    ###############################################################################################################################
+    # We recommend manually calculating the Jacobian for GMM, since the automatic differentiation sometimes causes numerical issues.
+    ###############################################################################################################################
     angles = np.linspace(0, 2 * np.pi, num_means, endpoint=False)
     if Xdim_flow == 2:
         means = [(c * np.cos(angle), c * np.sin(angle)) for angle in angles]
     else:
         means = [(c * np.cos(angle), c * np.sin(angle)) + (c/2,) * (Xdim_flow - 2) for angle in angles]
     variances = [[1] * Xdim_flow for i in range(len(means))]
-
 
     means = torch.tensor(means, device=device)
     variances = torch.tensor(variances, device=device)
@@ -249,7 +238,7 @@ def jacobian_manual_GMM(input_tensor, c):
     df_dx = beta * dg_dx + (1 - beta) * input_tensor
     return df_dx
 
-def jacobian_funnel_dd(input_tensor, sigma = 0.5):
+def score_funnel_dd(input_tensor, sigma = 0.5):
     d = input_tensor.shape[1]
     assert d >= 2, "The dimensionality of the input must be at least 2"
     z1 = input_tensor[:, 0]
@@ -292,23 +281,23 @@ def JKO_loss_func(xinput, model, ls_args_CNF, beta):
     if Type == 'GMM_sphere':
         #################################################################################
         # For GMM experiments:
-        ## We use the Type II loss, as discussed in "The objective" of Appendix C.2.
-        ## The energy function in the loss is replaced with: \nabla E(x(t_k)) \cdot v_k(x(t_k))
-        ## The Jacobian is computed manually, as the automatic differentiation sometimes causes numerical issues.
+        ## We use the Type II loss, as discussed in "The objective" of Appendix C.1.
+        ## The first term in the loss is replaced with: -\nabla \log q(x(t_k)) \cdot v_k(x(t_k))
+        ## The Jacobian is computed manually, as the automatic differentiation sometimes can cause numerical issues.
         #################################################################################
 
-        loss_V_dot = jacobian_manual_GMM(xpk, c=c)
+        loss_V_dot = score_GMM(xpk, c=c)
         loss_V_dot = torch.sum(loss_V_dot * v_field, dim=1).mean()
 
     elif Type == 'truncated':
         diff = xpk.pow(2).sum(axis=1)
         loss_V_dot = torch.log(1+torch.exp(-punishment*(torch.sqrt(diff)-c))).mean() + 0.5*(diff).mean()
 
-    elif Type == 'exponential' or Type == 'exponential_unequal':
+    elif Type == 'ExpGauss' or Type == 'ExpGauss_unequal':
         #################################################################################
         ## For ExpGauss experiments:
-        ## We use the Type II loss, as discussed in "The objective" of Appendix C.2.
-        ## The energy function in the loss is replaced with: \nabla E(x(t_k)) \cdot v_k(x(t_k))
+        ## We use the Type II loss, as discussed in "The objective" of Appendix C.1.
+        ## The first term in the loss is replaced with: -\nabla \log q(x(t_k)) \cdot v_k(x(t_k))
         #################################################################################
         if Xdim_flow <= 10:
             loss_V_dot = -torch.sign(xpk) * c * beta + xpk
@@ -317,14 +306,19 @@ def JKO_loss_func(xinput, model, ls_args_CNF, beta):
             loss_V_dot[:, :10] = -torch.sign(xpk[:, :10]) * c * beta + xpk[:, :10]
             loss_V_dot[:, 10:] = xpk[:, 10:]
 
-            if Type == 'exponential_unequal':
+            if Type == 'ExpGauss_unequal':
                 sigma2 = 0.5
                 loss_V_dot[:, :5] = -torch.sign(xpk[:, :5]) * c * beta/sigma2 + xpk[:, :5]/sigma2
                 loss_V_dot[:, 10:15] = xpk[:, 10:15]/sigma2
                 loss_V_dot[:, 15:] = xpk[:, 15:]
         loss_V_dot = torch.sum(loss_V_dot * v_field, dim=1).mean()
     elif Type == 'funnel':
-        loss_V_dot = jacobian_funnel_dd(xpk, sigma = 0.9)
+        #################################################################################
+        ## For funnel experiments:
+        ## We use the Type II loss, as discussed in "The objective" of Appendix C.1.
+        ## The first term in the loss is replaced with: -\nabla \log q(x(t_k)) \cdot v_k(x(t_k))
+        #################################################################################
+        loss_V_dot = score_funnel_dd(xpk, sigma = 0.9)
         loss_V_dot = torch.sum(loss_V_dot * v_field, dim=1).mean()
     return loss_V_dot, loss_div_tot, loss_W2_tot, loss_Jac_tot, raw_movement
 
@@ -412,19 +406,19 @@ def langevin_adjust(X, step_size=0.1, n_steps=20):
     X = X.clone()
     for _ in range(n_steps):
         if Type == 'GMM_sphere':
-            grad = jacobian_manual_GMM(X, c=c)
+            grad = score_GMM(X, c=c)
             grad = - grad
         elif Type == 'funnel':
-            grad = jacobian_funnel_dd(X, sigma = 0.9)
+            grad = score_funnel_dd(X, sigma = 0.9)
             grad = - grad
-        elif Type == 'exponential' or Type == 'exponential_unequal':
+        elif Type == 'ExpGauss' or Type == 'ExpGauss_unequal':
             if Xdim_flow <= 10:
                 grad = -torch.sign(X) * c * beta + X
             else:
                 grad = torch.zeros_like(X)
                 grad[:, :10] = -torch.sign(X[:, :10]) * c * beta + X[:, :10]
                 grad[:, 10:] = X[:, 10:]
-                if Type == 'exponential_unequal':
+                if Type == 'ExpGauss_unequal':
                     sigma2 = 0.5
                     grad[:, :5] = -torch.sign(X[:, :5]) * c * beta/sigma2 + X[:, :5]/sigma2
                     grad[:, 10:15] = X[:, 10:15]/sigma2
@@ -493,8 +487,13 @@ with open(args_parsed.AnnealingFlow_config, 'r') as file:
 if __name__ == '__main__':
     Type = args_yaml['data']['type']
     Xdim_flow = args_yaml['data']['Xdim_flow']
+
     # User can choose whether to use Langevin adjustment or not
+    # All results reported in the paper are obtained without Langevin adjustment
+    # For 50D ExpGauss, without Langevin, meaningful samples with separated modes 
+    # may only appear after training several blocks, as shown in the intermediate results plots.
     Langevin = True
+    
     block_idxes = args_yaml['training']['block_idxes']
     c = args_yaml['data']['c']
     c1 = c
@@ -526,7 +525,7 @@ if __name__ == '__main__':
         elif Type == 'GMM_sphere' and Xdim_flow > 2:
             beta = get_beta(block_id, number = 15)
 
-        elif Type == 'exponential' or Type == 'exponential_unequal':
+        elif Type == 'ExpGauss' or Type == 'ExpGauss_unequal':
             if Xdim_flow >= 4:
                 beta = get_beta(block_id, number = 15)
             else:
@@ -761,7 +760,7 @@ if __name__ == '__main__':
     plot_samples(Z_traj[-1], Type=Type, d= Xdim_flow, c=c1, plot_directory = plot_dir)
 
     # Count the number of modes explored for Exp-Weighted Gaussian
-    if Type == 'exponential' or Type == 'exponential_unequal':
+    if Type == 'ExpGauss' or Type == 'ExpGauss_unequal':
         def count_modes(samples, thresholds=None):
             if thresholds is None:
                 thresholds = [7] + [7] * (samples.shape[1] - 1)
@@ -786,9 +785,9 @@ if __name__ == '__main__':
             for i in range(min(15, len(variances))):
                 print(f"Dimension {i+1}: {variances[i]:.4f}")
             # Create true variances tensor
-            if Type == 'exponential':
+            if Type == 'ExpGauss':
                 true_variances = torch.ones_like(variances)
-            elif Type == 'exponential_unequal':
+            elif Type == 'ExpGauss_unequal':
                 true_variances = torch.ones_like(variances)
                 true_variances[0:5] = 0.5
                 true_variances[10:15] = 0.5

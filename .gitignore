@@ -19,6 +19,8 @@ Annealing_Flow_no_Langevin.py
 Annealing_Flow_sampler_no_Langevin.py
 
 plot_unequal.py
+Temper_no_Langevin.py
+plot_samples.py
 run_flow.sbatch
 
 toy_plot.py
@@ -28,3 +30,4 @@ gmm_density.png
 GMM_cube.yaml
 GMM_sphere_unequal.yaml
 Samplers.yaml
+Copula.yaml

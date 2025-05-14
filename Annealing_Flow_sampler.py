@@ -17,13 +17,32 @@ from scipy.stats import gaussian_kde
 import statsmodels.api as sm
 from Annealing_Flow import gen_data, get_e_ls, divergence_approx, divergence_bf, FCnet, ODEFunc,\
     CNF, default_CNF_structure, FlowNet_forward, l2_norm_sqr, move_over_blocks, push_samples_forward,\
-        on_off, load_prev_CNFs, loop_data_loader, langevin_adjust
+        on_off, load_prev_CNFs, loop_data_loader, langevin_adjust, get_c_and_punishment
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 num_gpu = torch.cuda.device_count()
 mult_gpu = False if num_gpu < 2 else True
 
+
+def get_c_and_punishment(block_id):
+    # Please increase the values accordingly if you set c > 8.
+    # However, select punishment values carefully, as exp(-punishment*(||x||-c)) may result in NAN values.
+    # Since we relax 1_{||x||>c} with log(1+exp(-punishment*(||x||-c))), 
+    # we need to slightly adjust the boundary radius c.
+    c_ = c1 + 0.1
+    if Xdim_flow <= 3:
+        if block_id <= 8:
+            return min(block_id , c_), min(35, 20+5*(block_id-4))
+        else:
+            return c_, 35
+    else:
+        if block_id <= 11:
+            return min(block_id//2 + 1 , c_), min(25, 15+5*(block_id-4)//2)
+        elif (block_id <= 14) and (block_id > 11):
+            return c_, 25
+        else:
+            return c_, 30
 
 def plot_samples(Xtraj, d, plot_directory=None, index=None):
     fig = plt.figure(figsize=(8.5, 8.5))
@@ -117,7 +136,7 @@ def plot_samples(Xtraj, d, plot_directory=None, index=None):
         ax2.set_title('Annealing Flow', fontsize=fsize)
         ax2.tick_params(axis='both', which='major', labelsize=26)
 
-        filename2 = f'd={d}_{Type}_sigma_{sigma}_Annealing_12.png'
+        filename2 = f'd={d}_{Type}_Annealing_12.png'
         plt.savefig(os.path.join(plot_directory, filename2))
         plt.savefig(os.path.join(plot_directory, filename2.replace('png', 'pdf')))
 
@@ -184,6 +203,9 @@ if __name__ == '__main__':
     print("#########################################################################################")
 
     Langevin = True
+
+    if Type == 'truncated':
+        Langevin = False
 
     samplers_trained_path = f'samplers_trained/d={Xdim_flow}_{Type}_c={c}'
 

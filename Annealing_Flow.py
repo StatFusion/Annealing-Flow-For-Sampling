@@ -454,9 +454,6 @@ def get_c_and_punishment(block_id):
     # Since we relax 1_{||x||>c} with log(1+exp(-punishment*(||x||-c))), 
     # we need to slightly adjust the boundary radius c.
     c_ = c1 + 0.1
-    if Type != 'truncated':
-        warnings.warn("This function is designed for 'truncated' type only.")
-        return None, None
     if Xdim_flow <= 3:
         if block_id <= 8:
             return min(block_id , c_), min(35, 20+5*(block_id-4))
@@ -493,6 +490,8 @@ if __name__ == '__main__':
     # For 50D ExpGauss, without Langevin, meaningful samples with separated modes 
     # may only appear after training several blocks, as shown in the intermediate results plots.
     Langevin = True
+    if Type == 'truncated':
+        Langevin = False
 
     block_idxes = args_yaml['training']['block_idxes']
     c = args_yaml['data']['c']

@@ -3,8 +3,8 @@ data:
   type: 'ExpGauss'
   unsymmetric: True
   Xdim_flow: 50
-  c: 10 # This serves as: radius for GMM_spehre (10 if num_means==8; 8 if num_means==6); radius for indicator, GMM_cube, and exponential
-  num_means: 10  # This is only used for GMM_spehre type; Ignore this for other types
+  c: 10 # This serves as: radius for GMM_spehre (10 if num_means==8; 8 if num_means==6); radius for truncated, ExpGauss
+  num_means: 8  # This is only used for GMM_spehre type; Ignore this for other types
   S: 3 # !! If users do not use the default S=list(3) when training their samplers, they must adjust this setting accordingly.
 
 CNF:
@@ -13,7 +13,6 @@ CNF:
 
 sampling:
   nsamples: 5000
-  Langevin: True 
   # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   # If the user used Langevin: True in the training, then the user must use Langevin: True in the sampling.
   # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

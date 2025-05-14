@@ -210,7 +210,7 @@ def l2_norm_sqr(input, return_full = False):
     else:
         return norms.mean()
 
-def score_GMM(input_tensor, c):
+def score_GMM(input_tensor, c, num_means, Xdim_flow, beta):
     ###############################################################################################################################
     # We recommend manually calculating the Jacobian for GMM, since the automatic differentiation sometimes causes numerical issues.
     ###############################################################################################################################
@@ -286,7 +286,7 @@ def JKO_loss_func(xinput, model, ls_args_CNF, beta):
         ## The Jacobian is computed manually, as the automatic differentiation sometimes can cause numerical issues.
         #################################################################################
 
-        loss_V_dot = score_GMM(xpk, c=c)
+        loss_V_dot = score_GMM(xpk, c=c, num_means=num_means, Xdim_flow=Xdim_flow, beta=beta)
         loss_V_dot = torch.sum(loss_V_dot * v_field, dim=1).mean()
 
     elif Type == 'truncated':
@@ -324,7 +324,7 @@ def JKO_loss_func(xinput, model, ls_args_CNF, beta):
 
 
 # Moves data through all given block (forward/backward), and return the intermediate results
-def move_over_blocks(self, move_configs, Langevin, Type, Xdim_flow, c, beta, nte = 1000):
+def move_over_blocks(self, move_configs, Langevin, Type, Xdim_flow, c, beta, nte = 1000, num_means=None):
     with torch.no_grad():
         Xtest = self.X_test.to(device)
         if move_configs.block_id > 1:
@@ -336,7 +336,7 @@ def move_over_blocks(self, move_configs, Langevin, Type, Xdim_flow, c, beta, nte
                 Zout, dlogpx = FlowNet_forward(Zout, self_mod.CNF, self_mod.ls_args_CNF, #ls_args_CNF consists of all sub-int
                                           self_mod.block_now, return_full = False)
                 if Langevin:
-                    Zout = langevin_adjust(Zout, Type=Type, Xdim_flow=Xdim_flow, c=c, beta=beta)
+                    Zout = langevin_adjust(Zout, Type=Type, Xdim_flow=Xdim_flow, c=c, beta=beta, num_means=num_means)
 
                 Zhat_ls_prev.append(Zout) #only the last value
                 dlogpx_ls_prev.append(dlogpx[-1])
@@ -347,7 +347,7 @@ def move_over_blocks(self, move_configs, Langevin, Type, Xdim_flow, c, beta, nte
                                      self.block_now, return_full = True)
 
         if Langevin:
-            Zhat_ls[-1] = langevin_adjust(Zhat_ls[-1], Type=Type, Xdim_flow=Xdim_flow, c=c, beta=beta)
+            Zhat_ls[-1] = langevin_adjust(Zhat_ls[-1], Type=Type, Xdim_flow=Xdim_flow, c=c, beta=beta, num_means=num_means)
 
         if mult_gpu:
             ids = range(len(Zhat_ls))
@@ -402,11 +402,11 @@ def loop_data_loader(dataloader):
 def pdist(sample_1, sample_2, norm=2):
     return torch.cdist(sample_1, sample_2, p=norm)
 
-def langevin_adjust(X, Type, Xdim_flow, c, beta, step_size=0.1, n_steps=20):
+def langevin_adjust(X, Type, Xdim_flow, c, beta, step_size=0.1, n_steps=20, num_means=None):
     X = X.clone()
     for _ in range(n_steps):
         if Type == 'GMM_sphere':
-            grad = score_GMM(X, c=c)
+            grad = score_GMM(X, c=c, num_means=num_means, Xdim_flow=Xdim_flow, beta=beta)
             grad = - grad
         elif Type == 'funnel':
             grad = score_funnel_dd(X, sigma = 0.9)
@@ -502,10 +502,17 @@ if __name__ == '__main__':
     if Langevin:
         master_dir += '_Langevin'
         args_yaml['training']['tot_iters'] = 500
-    
-    if Type == 'GMM_sphere':
-        num_means = args_yaml['data']['num_means']
 
+    if Type == 'GMM_sphere':
+        if Xdim_flow > 2:
+            warnings.warn("GMM_sphere is not coded for Xdim_flow > 2.")
+            warnings.warn("You may need to manually code score_GMM.")
+            warnings.warn("Please implement higher dimensions, e.g., 50D, using ExpGauss.yaml.")
+            exit()
+        num_means = args_yaml['data']['num_means']
+    else:
+        num_means = None
+        
     for block_id in block_idxes:
         if Type == 'truncated':
             Langevin = False
@@ -681,7 +688,7 @@ if __name__ == '__main__':
                 print(f'######### Evaluate at iter {i+1}')    
                 on_off(self, on = True)
                 move_configs = Namespace(block_id = block_id, self_ls_prev = self_ls_prev)
-                Z_traj, tot_dlogpx = move_over_blocks(self, move_configs, Langevin=Langevin, Type=Type, Xdim_flow=Xdim_flow, c=c, beta=beta, nte = nte) # Towards the target distribution
+                Z_traj, tot_dlogpx = move_over_blocks(self, move_configs, Langevin=Langevin, Type=Type, Xdim_flow=Xdim_flow, c=c, beta=beta, nte = nte, num_means=num_means) # Towards the target distribution
                 index = i//viz_freq
                 plot_traj(Z_traj, args_yaml['data']['Xdim_flow'])
 
@@ -693,7 +700,7 @@ if __name__ == '__main__':
                 on_off(self, on = True)
                 nmax = 10000
                 move_configs = Namespace(block_id = block_id, self_ls_prev = self_ls_prev)
-                X_traj, tot_dlogpx = move_over_blocks(self, move_configs, Langevin=Langevin, Type=Type, Xdim_flow=Xdim_flow, c=c, beta=beta, nte=nmax)
+                X_traj, tot_dlogpx = move_over_blocks(self, move_configs, Langevin=Langevin, Type=Type, Xdim_flow=Xdim_flow, c=c, beta=beta, nte=nmax, num_means=num_means)
                 on_off(self, on = False)
                 Xtrain_pushed = push_samples_forward(train_loader_raw, self)
                 print(f'##### Shape of Xtrain_pushed is {Xtrain_pushed.shape} #####')
@@ -750,7 +757,7 @@ if __name__ == '__main__':
     on_off(self, on = True)
     move_configs = Namespace(block_id = block_id, self_ls_prev = self_ls_prev)
     start_time = time.time()
-    Z_traj, tot_dlogpx = move_over_blocks(self, move_configs, Langevin=Langevin, Type=Type, Xdim_flow=Xdim_flow, c=c, beta=beta, nte = nte)
+    Z_traj, tot_dlogpx = move_over_blocks(self, move_configs, Langevin=Langevin, Type=Type, Xdim_flow=Xdim_flow, c=c, beta=beta, nte = nte, num_means=num_means)
 
     end_time = time.time()
     print(f"Time taken for sampling {nte} points: {end_time - start_time} seconds")

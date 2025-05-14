@@ -1,8 +1,12 @@
 # Ignore Bayesian Logistics results
 Bayesian_Logistics/results/
+Bayesian_Logistics/load_data.py
+Bayesian_Logistics/read_data.py
+Bayesian_Logistics/dataset/TBP.csv
 BNN/
 more_pics/
 others/
+samples/
 
 AnnealingFlow_Posterior/
 Flow/

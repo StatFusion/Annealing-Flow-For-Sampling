@@ -1,6 +1,6 @@
 data:
   type: 'GMM_sphere'
-  Xdim_flow: 2  # Please use more block_idxes by changing below if Xdim_flow > 2
+  Xdim_flow: 2 
   c: 12
   indicator: False
   num_means: 10

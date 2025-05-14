@@ -441,31 +441,25 @@ def Bayesian_Logistic_test(Ztraj, X_test, y_test):
     return avg_accuracy, std_accuracy, avg_log_posterior
 
 parser = argparse.ArgumentParser(description='Load hyperparameters from a YAML file.')
-parser.add_argument('--JKO_config', default = 'Bayesian_Logistics/Annealing_Flow.yaml', type=str, help='Path to the YAML file')
+parser.add_argument('--JKO_config', default = 'Annealing_Flow.yaml', type=str, help='Path to the YAML file')
 args_parsed = parser.parse_args()
 with open(args_parsed.JKO_config, 'r') as file:
     args_yaml = yaml.safe_load(file)
 
 if __name__ == '__main__':
     block_idxes = args_yaml['training']['block_idxes']
-    master_dir = 'Bayesian_Logistics'
     gradient_based = False
     dataset = args_yaml['data']['dataset']
-    file_path = os.path.join(master_dir, f'dataset/{dataset}')
+    file_path = f'dataset/{dataset}'
 
     if dataset == 'codon_usage.csv':
         df = pd.read_csv(file_path, header=0, low_memory=False)  # Suppress mixed type warnings
         df = df[(df['DNAtype'] == 0) | (df['DNAtype'] == 1)]  # Keep rows where DNAtype == 0 or 1
-
-        # Step 2: Ensure columns 6 to the end are numeric
         numeric_df = df.iloc[:, 5:].apply(pd.to_numeric, errors='coerce')  # Convert to numeric
         numeric_df = numeric_df.dropna()  # Drop rows with any NaN values
-
-        # Step 3: Extract y and corresponding rows of X
         filtered_df = df.loc[numeric_df.index]  # Align with clean rows
         y = torch.tensor(filtered_df.iloc[:, 1].values, dtype=torch.float32)  # Second column as y
         X = torch.tensor(numeric_df.values, dtype=torch.float32)  # Columns 6 to the end as X
-
         print(X.shape)
         print(y.shape)
 
@@ -504,7 +498,7 @@ if __name__ == '__main__':
     else:
         Xdim_flow = X_train_tensor.shape[1] + 1
 
-    master_dir = os.path.join(master_dir, f'results/{dataset}')
+    master_dir = f'results/{dataset}'
     os.makedirs(master_dir, exist_ok=True)
     acc_list = []
     for block_id in block_idxes:

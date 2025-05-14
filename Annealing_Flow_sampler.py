@@ -171,8 +171,17 @@ if __name__ == '__main__':
     Xdim_flow = args_yaml['data']['Xdim_flow']
     d = args_yaml['data']['Xdim_flow']
     c = args_yaml['data']['c']
+    c1 = c
     num_means = args_yaml['data']['num_means']
     Type = args_yaml['data']['type']
+
+    print("###########################################################################################################")
+    print("If the user used Langevin == True in the training, then the user must set Langevin: True in the sampling.")
+    print("###########################################################################################################")
+
+    print("#########################################################################################")
+    print(f"During sampling, beta must be chosen the same as in the training.")
+    print("#########################################################################################")
 
     Langevin = True
 
@@ -287,7 +296,7 @@ if __name__ == '__main__':
     on_off(self, on = True)
     move_configs = Namespace(block_id = block_id, self_ls_prev = self_ls_prev)
     start_time = time.time()
-    Z_traj, tot_dlogpx = move_over_blocks(self, move_configs, Langevin=Langevin, Type=Type, Xdim_flow=Xdim_flow, c=c, beta=beta, nte = nte)
+    Z_traj, tot_dlogpx = move_over_blocks(self, move_configs, Langevin=Langevin, Type=Type, Xdim_flow=Xdim_flow, c=c, beta=beta, nte = nte, num_means=num_means)
 
     end_time = time.time()
     print(f"Time taken for sampling {nte} points: {end_time - start_time} seconds")
@@ -297,8 +306,14 @@ if __name__ == '__main__':
     os.makedirs(plot_dir, exist_ok=True)
     plot_samples(Z_traj[-1], d= Xdim_flow, plot_directory = plot_dir)
 
+    samples_dir = 'samples/'
+    os.makedirs(samples_dir, exist_ok=True)
+    samples_path = os.path.join(samples_dir, f'samples_d={Xdim_flow}_{Type}_c={c}.pt')
+    torch.save(Z_traj[-1], samples_path)
+    print(f"Samples saved to {samples_path}")
+
     # Count the number of modes explored for Exp-Weighted Gaussian
-    if Type == 'exponential':
+    if Type == 'ExpGauss':
         def count_modes(samples, thresholds=None):
             if thresholds is None:
                 thresholds = [7] + [7] * (samples.shape[1] - 1)

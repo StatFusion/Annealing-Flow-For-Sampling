@@ -1,5 +1,5 @@
 data:
-  The type can be: 'GMM_sphere', 'ExpGauss', 'truncated', 'funnel'
+  #The type can be: 'GMM_sphere', 'ExpGauss', 'truncated', 'funnel'
   type: 'ExpGauss'
   unsymmetric: True
   Xdim_flow: 50

@@ -29,7 +29,7 @@ For Bayesian logistics, please run Annealing_Flow.py in a similar way from the B
 
 ### After running `Annealing_Flow.py`:
 
-All All trained velocity fields are saved in: 
+All trained velocity fields are saved in: 
 `/samplers_trained/{distributions you trained}/block_{i}.pth`.
 
 You can then follow a similar main loop as in `Annealing_Flow.py` to generate new samples using the saved neural networks.

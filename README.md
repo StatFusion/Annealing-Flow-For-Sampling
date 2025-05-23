@@ -16,29 +16,23 @@ Use `Annealing_Flow.py` for training the samplers. After the samplers are traine
 
 1. Navigate to the main project directory using `cd`.
 
-2. Then to train a GMM with 6 modes on a sphere, for example, run:
+2. Then to train 50D ExpGauss with 1024 modes, for example, run:
    ```python
-   python Annealing_Flow.py --AnnealingFlow_config GMM_sphere_6_means.yaml
+   python Annealing_Flow.py --AnnealingFlow_config ExpGauss.yaml
 
 ### Configuration Files:
-1. GMM_sphere_{number}_means.yaml: GMMs with different numbers of means aligned on a circle
+1. GMM_sphere_c={radius}.yaml: GMMs with different numbers of means aligned on a circle with radius c.
 2. truncated.yaml: Truncated Normal distribution with varying dimensions and radius c, i.e., 1_{||x||>c}*N(0,I_{d})
 3. funnel.yaml: Funnel distribution on 5D space
-4. exponential.yaml: Exp-Weighted Gaussian distribution with 1024 modes on 10D space
+4. ExpGauss.yaml: Exp-Weighted Gaussian distribution with 1024 modes on 50D space
+5. ExpGauss_unequal.yaml: Unequally weighted Exp-Weighted Gaussian distribution with 1024 modes on 50D space
 
 For Bayesian logistics, please run Annealing_Flow.py in a similar way from the Bayesian_Logistics folder.
 
-#### To Run `Annealing_Flow_sampler.py`:
+#### After running `Annealing_Flow.py`:
 
-1. Make sure you have run Annealing_Flow.py already
-  
-2. Update the `master_dir` to the correct master directory inside the block:
-   ```python
-   if __name__ == '__main__':
-   
-3. Modify the distributions you want to sample inside Samplers.yaml.
+All All trained velocity fields are saved in: 
+`/samplers_trained/{distributions you trained}/block_{i}.pth`.
 
-4. Run the following command:
-   ```python
-   python Annealing_Flow_sampler.py --AnnealingFlow_config Samplers.yaml
+You can then follow a similar main loop as in `Annealing_Flow.py` to generate new samples using the saved neural networks.
 

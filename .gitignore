@@ -21,6 +21,7 @@ samplers_trained_Langevin/
 plot_results_Langevin/
 
 Annealing_Flow_no_Langevin.py
+Annealing_Flow_sampler.py
 Annealing_Flow_sampler_no_Langevin.py
 
 plot_unequal.py
@@ -36,3 +37,4 @@ GMM_cube.yaml
 GMM_sphere_unequal.yaml
 Samplers.yaml
 Copula.yaml
+Samplers.yaml

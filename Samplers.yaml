@@ -1,8 +1,8 @@
 data:
-  #The type can be: 'GMM_sphere', 'ExpGauss', 'truncated', 'funnel'
-  type: 'ExpGauss'
+  #The type can be: 'GMM_sphere', 'ExpGauss', 'ExpGauss_unequal', 'truncated', 'funnel'
+  type: 'GMM_sphere' #'ExpGauss'
   unsymmetric: True
-  Xdim_flow: 50
+  Xdim_flow: 2 #50
   c: 10 # This serves as: radius for GMM_spehre (10 if num_means==8; 8 if num_means==6); radius for truncated, ExpGauss
   num_means: 8  # This is only used for GMM_spehre type; Ignore this for other types
   S: 3 # !! If users do not use the default S=list(3) when training their samplers, they must adjust this setting accordingly.

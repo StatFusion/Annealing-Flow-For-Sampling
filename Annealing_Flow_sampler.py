@@ -323,11 +323,6 @@ if __name__ == '__main__':
     end_time = time.time()
     print(f"Time taken for sampling {nte} points: {end_time - start_time} seconds")
 
-    plot_dir = '/storage/home/hcoda1/3/dwu381/p-yxie77-0/Flow/temperflow/tf/samples'
-
-    os.makedirs(plot_dir, exist_ok=True)
-    plot_samples(Z_traj[-1], d= Xdim_flow, plot_directory = plot_dir)
-
     samples_dir = 'samples/'
     os.makedirs(samples_dir, exist_ok=True)
     samples_path = os.path.join(samples_dir, f'samples_d={Xdim_flow}_{Type}_c={c}.pt')

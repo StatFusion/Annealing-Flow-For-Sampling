@@ -402,7 +402,7 @@ def loop_data_loader(dataloader):
 def pdist(sample_1, sample_2, norm=2):
     return torch.cdist(sample_1, sample_2, p=norm)
 
-def langevin_adjust(X, Type, Xdim_flow, c, beta, step_size=0.1, n_steps=20, num_means=None):
+def langevin_adjust(X, Type, Xdim_flow, c, beta, step_size=0.1, n_steps=30, num_means=None):
     X = X.clone()
     for _ in range(n_steps):
         if Type == 'GMM_sphere':
@@ -702,6 +702,8 @@ if __name__ == '__main__':
                 X_traj, tot_dlogpx = move_over_blocks(self, move_configs, Langevin=Langevin, Type=Type, Xdim_flow=Xdim_flow, c=c, beta=beta, nte=nmax, num_means=num_means)
                 on_off(self, on = False)
                 Xtrain_pushed = push_samples_forward(train_loader_raw, self)
+                if Langevin:
+                    Xtrain_pushed = langevin_adjust(Xtrain_pushed, Type=Type, Xdim_flow=Xdim_flow, c=c, beta=beta, num_means=num_means)
                 print(f'##### Shape of Xtrain_pushed is {Xtrain_pushed.shape} #####')
                 filename_data = filepath.split('.pth')[0] + '_Xpushed.pkl'
                 pickle.dump(Xtrain_pushed, open(filename_data, 'wb'))

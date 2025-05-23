@@ -8,11 +8,9 @@
 
 ## Usage Instructions
 
-### Training the Samplers
+Use `Annealing_Flow.py` for training the samplers and obtaining samples.
 
-Use `Annealing_Flow.py` for training the samplers. After the samplers are trained, use `Annealing_Flow_sampler.py` for sampling.
-
-#### To Run `Annealing_Flow.py`:
+### To Run `Annealing_Flow.py`:
 
 1. Navigate to the main project directory using `cd`.
 
@@ -29,7 +27,7 @@ Use `Annealing_Flow.py` for training the samplers. After the samplers are traine
 
 For Bayesian logistics, please run Annealing_Flow.py in a similar way from the Bayesian_Logistics folder.
 
-#### After running `Annealing_Flow.py`:
+### After running `Annealing_Flow.py`:
 
 All All trained velocity fields are saved in: 
 `/samplers_trained/{distributions you trained}/block_{i}.pth`.

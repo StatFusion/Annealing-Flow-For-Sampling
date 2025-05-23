@@ -441,9 +441,9 @@ def Bayesian_Logistic_test(Ztraj, X_test, y_test):
     return avg_accuracy, std_accuracy, avg_log_posterior
 
 parser = argparse.ArgumentParser(description='Load hyperparameters from a YAML file.')
-parser.add_argument('--JKO_config', default = 'Annealing_Flow.yaml', type=str, help='Path to the YAML file')
+parser.add_argument('--Annealing_Flow_config', default = 'Annealing_Flow.yaml', type=str, help='Path to the YAML file')
 args_parsed = parser.parse_args()
-with open(args_parsed.JKO_config, 'r') as file:
+with open(args_parsed.Annealing_Flow_config, 'r') as file:
     args_yaml = yaml.safe_load(file)
 
 if __name__ == '__main__':

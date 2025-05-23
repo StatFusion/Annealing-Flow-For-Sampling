@@ -509,6 +509,10 @@ if __name__ == '__main__':
             warnings.warn("Please implement higher dimensions, e.g., 50D, using ExpGauss.yaml.")
             exit()
         num_means = args_yaml['data']['num_means']
+    elif Type == 'ExpGauss' or Type == 'ExpGauss_unequal':
+        if not Langevin:
+            block_idxes.extend(range(21,26))
+        num_means = None
     else:
         num_means = None
         
@@ -533,10 +537,10 @@ if __name__ == '__main__':
             beta = get_beta(block_id, number = 15)
 
         elif Type == 'ExpGauss' or Type == 'ExpGauss_unequal':
-            if Xdim_flow >= 4:
+            if Langevin:
                 beta = get_beta(block_id, number = 15)
             else:
-                beta = get_beta(block_id, number = 15)
+                beta = get_beta(block_id, number = 20)
         else:
             beta = get_beta(block_id, number = 8)
     

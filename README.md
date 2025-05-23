@@ -14,9 +14,7 @@ Use `Annealing_Flow.py` for training the samplers. After the samplers are traine
 
 #### To Run `Annealing_Flow.py`:
 
-1. Update the `master_dir` to the correct master directory inside the block:
-   ```python
-   if __name__ == '__main__':
+1. Navigate to the main project directory using `cd`.
 
 2. Then to train a GMM with 6 modes on a sphere, for example, run:
    ```python

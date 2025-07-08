@@ -1,4 +1,5 @@
 ## Citation
+```bibtex
 @inproceedings{wu2025annealing,
   title={Annealing Flow Generative Model Towards Sampling High-Dimensional and Multi-Modal Distributions},
   author={Wu, Dongze and Xie, Yao},

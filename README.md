@@ -1,3 +1,11 @@
+## Citation
+@inproceedings{wu2025annealing,
+  title={Annealing Flow Generative Model Towards Sampling High-Dimensional and Multi-Modal Distributions},
+  author={Wu, Dongze and Xie, Yao},
+  booktitle={Proceedings of the 42nd International Conference on Machine Learning (ICML)},
+  year={2025}
+}
+
 ## Requirements
 
 - `torch`
